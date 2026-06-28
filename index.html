@@ -1,0 +1,1719 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DebtTracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #FFF5F7;
+    --bg-card:   #FFFFFF;
+    --bg-raised: #FFF0F3;
+    --border:    #FECDD3;
+    --border-mid:#FDA4AF;
+    --rose:      #E8184A;
+    --rose-deep: #C0113A;
+    --rose-soft: #FB7185;
+    --pink:      #F472B6;
+    --pink-light:#FCE7F3;
+    --text:      #1A0A0E;
+    --text-mid:  #6B2137;
+    --text-muted:#C08090;
+    --white:     #FFFFFF;
+    --success:   #059669;
+    --success-bg:#ECFDF5;
+    --warn-bg:   #FFF7ED;
+    --warn:      #D97706;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Sarabun', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  .app-frame {
+    max-width: 420px;
+    margin: 0 auto;
+    min-height: 100vh;
+    background: var(--bg);
+    position: relative;
+    overflow-x: hidden;
+  }
+  .screen { display: none; }
+  .screen.active { display: flex; flex-direction: column; min-height: 100vh; }
+
+  /* ── Top bar ── */
+  .top-bar {
+    background: var(--white);
+    border-bottom: 1.5px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .logo-text {
+    font-family: 'Prompt', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    background: linear-gradient(90deg, var(--rose) 0%, var(--pink) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ── Summary hero ── */
+  .summary-hero {
+    background: linear-gradient(135deg, #E8184A 0%, #F472B6 60%, #FB923C 100%);
+    border-radius: 22px;
+    padding: 22px 20px 18px;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 16px;
+    box-shadow: 0 8px 28px rgba(232,24,74,0.22);
+  }
+  .summary-hero::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 140px; height: 140px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.12);
+  }
+  .summary-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -20px; left: 30px;
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: 18px;
+    padding: 16px;
+  }
+  .card-inner {
+    background: var(--bg-raised);
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+
+  /* ── Input ── */
+  .input-field {
+    width: 100%;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 11px 14px;
+    color: var(--text);
+    font-family: 'Sarabun', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .input-field:focus {
+    border-color: var(--rose-soft);
+    box-shadow: 0 0 0 3px rgba(244,114,182,0.15);
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator {
+    filter: invert(30%) sepia(80%) saturate(500%) hue-rotate(310deg);
+    cursor: pointer;
+  }
+  label.form-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  /* ── Category chips ── */
+  .cat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border-radius: 30px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .cat-chip:hover { transform: scale(1.04); }
+  .cat-chip.selected { border-color: var(--rose) !important; box-shadow: 0 2px 10px rgba(232,24,74,0.2); transform: scale(1.05); }
+
+  .cat-food      { background: #FFF7ED; color: #92400E; }
+  .cat-household { background: #F0FDF4; color: #166534; }
+  .cat-medicine  { background: #FFF1F2; color: #9F1239; }
+  .cat-transport { background: #EFF6FF; color: #1E40AF; }
+  .cat-utility   { background: #F0FDFA; color: #115E59; }
+  .cat-personal  { background: #FCE7F3; color: #9D174D; }
+  .cat-special   { background: #FFF7ED; color: #C2410C; }
+  .cat-other     { background: #F8FAFC; color: #475569; }
+
+  .cat-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  /* ── Buttons ── */
+  .btn-primary {
+    width: 100%;
+    background: linear-gradient(135deg, var(--rose) 0%, var(--rose-soft) 100%);
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    padding: 14px;
+    font-family: 'Prompt', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    box-shadow: 0 4px 14px rgba(232,24,74,0.3);
+  }
+  .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-green {
+    background: linear-gradient(135deg, #059669 0%, #10B981 100%);
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    padding: 14px;
+    font-family: 'Prompt', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(5,150,105,0.25);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 13px;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: 'Sarabun', sans-serif;
+    transition: background 0.15s;
+  }
+  .btn-ghost:hover { background: var(--bg-raised); }
+  .btn-danger {
+    background: #FFF1F2;
+    color: #9F1239;
+    border: 1.5px solid #FECDD3;
+    border-radius: 12px;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-family: 'Sarabun', sans-serif;
+  }
+  .btn-danger:hover { background: #FFE4E6; }
+  .btn-disabled {
+    background: var(--bg-raised);
+    color: var(--text-muted);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: not-allowed;
+  }
+  .btn-bulk {
+    background: var(--pink-light);
+    color: #9D174D;
+    border: 1.5px solid #FBCFE8;
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-family: 'Sarabun', sans-serif;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .btn-bulk:hover { background: #FCE7F3; }
+
+  /* ── Bottom nav ── */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 420px;
+    background: var(--white);
+    border-top: 1.5px solid var(--border);
+    display: flex;
+    z-index: 20;
+  }
+  .nav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 4px 14px;
+    cursor: pointer;
+    font-size: 10px;
+    color: var(--text-muted);
+    gap: 4px;
+    transition: color 0.2s;
+    background: none;
+    border: none;
+    font-family: 'Sarabun', sans-serif;
+  }
+  .nav-btn.active { color: var(--rose); }
+  .nav-btn svg { width: 20px; height: 20px; }
+
+  /* ── Loan card ── */
+  .loan-record {
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: 18px;
+    padding: 16px;
+    transition: box-shadow 0.15s, transform 0.15s;
+  }
+  .loan-record:hover { box-shadow: 0 4px 16px rgba(232,24,74,0.08); transform: translateY(-1px); }
+  .loan-record.paid { opacity: 0.6; }
+  .loan-record.special-gift { border-color: #FED7AA; background: linear-gradient(135deg, #FFF7ED 0%, #FFFFFF 100%); }
+
+  /* ── Progress bar ── */
+  .progress-bar-outer {
+    background: var(--bg-raised);
+    border-radius: 99px;
+    height: 6px;
+    overflow: hidden;
+    margin-top: 10px;
+  }
+  .progress-bar-inner {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, var(--rose) 0%, var(--pink) 100%);
+    transition: width 0.4s ease;
+  }
+  .progress-bar-inner.done { background: linear-gradient(90deg, #059669 0%, #10B981 100%); }
+  .progress-bar-inner.special { background: linear-gradient(90deg, #F97316 0%, #FBBF24 100%); }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(26,10,14,0.45);
+    backdrop-filter: blur(2px);
+    z-index: 50;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.hidden { display: none; }
+  .modal-sheet {
+    background: var(--white);
+    border-radius: 26px 26px 0 0;
+    border: 1.5px solid var(--border);
+    border-bottom: none;
+    width: 100%;
+    max-width: 420px;
+    max-height: 92vh;
+    overflow-y: auto;
+    padding: 24px 20px 40px;
+    animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+  .modal-handle {
+    width: 40px; height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 0 auto 20px;
+  }
+  .modal-title {
+    font-family: 'Prompt', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .modal-sub {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+  }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    padding: 12px 20px;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    animation: fadeInOut 3s ease forwards;
+    pointer-events: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  }
+  .toast.success { background: var(--success-bg); color: var(--success); border: 1.5px solid #A7F3D0; }
+  .toast.error   { background: #FFF1F2; color: #9F1239; border: 1.5px solid #FECDD3; }
+  .toast.warn    { background: var(--warn-bg); color: var(--warn); border: 1.5px solid #FDE68A; }
+  @keyframes fadeInOut {
+    0%   { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+    15%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+    75%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  /* ── Confirm dialog ── */
+  .confirm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(26,10,14,0.5);
+    backdrop-filter: blur(3px);
+    z-index: 80;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .confirm-overlay.hidden { display: none; }
+  .confirm-box {
+    background: var(--white);
+    border-radius: 22px;
+    border: 1.5px solid var(--border);
+    padding: 28px 22px 22px;
+    max-width: 340px;
+    width: 100%;
+    text-align: center;
+    animation: popIn 0.2s ease;
+    box-shadow: 0 20px 60px rgba(232,24,74,0.15);
+  }
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.92); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  /* ── Misc ── */
+  .scrollable { flex: 1; overflow-y: auto; padding-bottom: 80px; }
+  .scrollable::-webkit-scrollbar { width: 3px; }
+  .scrollable::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .section-title {
+    font-family: 'Prompt', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .gift-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: #FFF7ED;
+    color: #C2410C;
+    font-size: 10px;
+    font-weight: 700;
+    border: 1px solid #FED7AA;
+  }
+  .fab {
+    position: fixed;
+    bottom: 80px;
+    right: calc(50% - 200px);
+    width: 54px; height: 54px;
+    background: linear-gradient(135deg, var(--rose) 0%, var(--rose-soft) 100%);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 24px rgba(232,24,74,0.4);
+    transition: transform 0.15s, box-shadow 0.15s;
+    z-index: 15;
+    font-size: 24px;
+    font-weight: 300;
+  }
+  .fab:hover { transform: scale(1.08); box-shadow: 0 10px 30px rgba(232,24,74,0.5); }
+  .fab:active { transform: scale(0.95); }
+  .bulk-bar {
+    background: var(--pink-light);
+    border: 1.5px solid #FBCFE8;
+    border-radius: 16px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .bulk-bar.hidden { display: none; }
+  .loan-check { width: 18px; height: 18px; accent-color: var(--rose); cursor: pointer; flex-shrink: 0; }
+  .special-warn-box {
+    background: #FFF7ED;
+    border: 1.5px solid #FED7AA;
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 12px;
+    color: #92400E;
+    display: none;
+    margin-top: 8px;
+    line-height: 1.6;
+  }
+  /* Action picker button */
+  .pick-btn {
+    width: 100%;
+    background: var(--bg-raised);
+    border: 1.5px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: border-color 0.15s, background 0.15s;
+    text-align: left;
+    font-family: 'Sarabun', sans-serif;
+  }
+  .pick-btn:hover { background: #FFF0F3; border-color: var(--rose-soft); }
+  .pick-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+<div class="app-frame">
+
+  <!-- SCREEN: HOME -->
+  <div id="screen-home" class="screen active">
+    <div class="top-bar">
+      <div class="logo-text">DebtTracker 🌸</div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <div style="font-size:11px;color:var(--text-muted);">คงค้าง</div>
+        <div id="header-total" style="font-family:'Prompt',sans-serif;font-size:15px;font-weight:700;color:var(--rose);">0 บ.</div>
+      </div>
+    </div>
+
+    <div class="scrollable" style="padding:16px 16px 0;">
+      <!-- Hero summary -->
+      <div class="summary-hero">
+        <div style="font-size:11px;color:rgba(255,255,255,0.75);font-weight:600;letter-spacing:0.5px;margin-bottom:4px;">ยอดหนี้คงค้างทั้งหมด</div>
+        <div id="total-debt-display" style="font-family:'Prompt',sans-serif;font-size:34px;font-weight:700;color:#fff;position:relative;z-index:1;">฿0.00</div>
+        <div style="display:flex;gap:22px;margin-top:14px;position:relative;z-index:1;">
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.65);">ทั้งหมด</div>
+            <div id="stat-total" style="font-size:20px;font-weight:700;color:#fff;">0</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.65);">ชำระครบ</div>
+            <div id="stat-paid" style="font-size:20px;font-weight:700;color:#fff;">0</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.65);">ค้างชำระ</div>
+            <div id="stat-unpaid" style="font-size:20px;font-weight:700;color:#fff;">0</div>
+          </div>
+        </div>
+        <!-- Cumulative total -->
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.15);position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;">
+          <div style="font-size:11px;color:rgba(255,255,255,0.55);">📊 ยืมสะสมทั้งหมด (ตั้งแต่เริ่มใช้งาน)</div>
+          <div id="stat-cumulative" style="font-family:'Prompt',sans-serif;font-size:14px;font-weight:700;color:rgba(255,255,255,0.65);">฿0.00</div>
+        </div>
+      </div>
+
+      <!-- Filter chips -->
+      <div style="overflow-x:auto;padding-bottom:8px;margin-bottom:12px;display:flex;gap:6px;" id="filter-row">
+        <button onclick="setFilter('all')" id="filter-all" class="cat-chip selected" style="background:var(--rose);color:#fff;border-color:var(--rose);">ทั้งหมด</button>
+      </div>
+
+      <!-- Bulk bar -->
+      <div class="bulk-bar hidden" id="bulk-bar">
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <div style="font-size:12px;font-weight:700;color:#9D174D;">ชำระโดยรวม</div>
+          <div id="bulk-count-label" style="font-size:11px;color:var(--text-muted);">เลือก 0 รายการ</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button onclick="selectAllLoans()" class="btn-bulk">เลือกทั้งหมด</button>
+          <button onclick="openBulkPayModal()" class="btn-primary" style="width:auto;padding:9px 16px;font-size:13px;">ชำระ</button>
+          <button onclick="exitBulkMode()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;line-height:1;">✕</button>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="section-title" style="margin-bottom:0;">รายการยืม</div>
+        <button onclick="exitBulkMode()" id="bulk-exit-btn" style="display:none;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;padding:4px 8px;">✕ ยกเลิก</button>
+      </div>
+
+      <div id="loan-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+      <div id="empty-state" style="text-align:center;padding:50px 20px;color:var(--text-muted);">
+        <div style="font-size:40px;margin-bottom:12px;">🌸</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text-mid);">ยังไม่มีรายการ</div>
+        <div style="font-size:12px;margin-top:4px;">กด + เพื่อเพิ่มรายการ</div>
+      </div>
+    </div>
+    <button class="fab" onclick="openActionPicker()">+</button>
+  </div>
+
+  <!-- SCREEN: STATS -->
+  <div id="screen-stats" class="screen">
+    <div class="top-bar">
+      <div class="logo-text">สรุปหมวดหมู่ 📊</div>
+    </div>
+    <div class="scrollable" style="padding:16px;">
+      <div class="section-title" style="margin-bottom:14px;">ยอดตามหมวดหมู่</div>
+      <div id="cat-stats-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="nav-home" onclick="switchScreen('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>หน้าหลัก</span>
+    </button>
+    <button class="nav-btn" id="nav-stats" onclick="switchScreen('stats')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="18" y="3" width="4" height="18"/><rect x="10" y="8" width="4" height="13"/><rect x="2" y="13" width="4" height="8"/></svg>
+      <span>สรุป</span>
+    </button>
+  </nav>
+</div>
+
+<!-- MODAL: ACTION PICKER -->
+<div id="modal-action" class="modal-overlay hidden" onclick="if(event.target===this)closeActionPicker()">
+  <div class="modal-sheet" style="padding-bottom:32px;">
+    <div class="modal-handle"></div>
+    <div class="modal-title">ต้องการทำอะไร? 🌸</div>
+    <div class="modal-sub">เลือกประเภทรายการ</div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button class="pick-btn" onclick="closeActionPicker();openBorrowModal()">
+        <div class="pick-icon" style="background:#FFF0F3;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E8184A" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </div>
+        <div>
+          <div style="font-family:'Prompt',sans-serif;font-size:15px;font-weight:700;color:var(--text);">บันทึกการยืม</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">เพิ่มรายการยืมเงินใหม่</div>
+        </div>
+        <svg style="margin-left:auto;flex-shrink:0;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C08090" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+      <button class="pick-btn" onclick="closeActionPicker();openPayFromPicker()">
+        <div class="pick-icon" style="background:#ECFDF5;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.2"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div>
+          <div style="font-family:'Prompt',sans-serif;font-size:15px;font-weight:700;color:var(--text);">บันทึกการชำระ</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">ชำระหนี้รายการเดียวหรือหลายรายการ</div>
+        </div>
+        <svg style="margin-left:auto;flex-shrink:0;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C08090" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+    <button class="btn-ghost" style="width:100%;margin-top:14px;" onclick="closeActionPicker()">ยกเลิก</button>
+  </div>
+</div>
+
+<!-- MODAL: PAY PICKER -->
+<div id="modal-pay-picker" class="modal-overlay hidden" onclick="if(event.target===this)closePayPicker()">
+  <div class="modal-sheet" style="padding-bottom:32px;">
+    <div class="modal-handle"></div>
+    <div class="modal-title">ชำระหนี้</div>
+    <div class="modal-sub">เลือกรูปแบบการชำระ</div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button class="pick-btn" onclick="closePayPicker();openSinglePayPicker()">
+        <div class="pick-icon" style="background:#EFF6FF;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 12h8M8 8h5"/></svg>
+        </div>
+        <div>
+          <div style="font-family:'Prompt',sans-serif;font-size:14px;font-weight:700;color:var(--text);">ชำระรายการเดียว</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">เลือกรายการที่ต้องการชำระ</div>
+        </div>
+        <svg style="margin-left:auto;flex-shrink:0;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C08090" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+      <button class="pick-btn" onclick="closePayPicker();enterBulkFromPicker()">
+        <div class="pick-icon" style="background:#FCE7F3;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9D174D" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        </div>
+        <div>
+          <div style="font-family:'Prompt',sans-serif;font-size:14px;font-weight:700;color:var(--text);">ชำระหลายรายการพร้อมกัน</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">เลือกหลายรายการแล้วชำระรวม</div>
+        </div>
+        <svg style="margin-left:auto;flex-shrink:0;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C08090" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+    <button class="btn-ghost" style="width:100%;margin-top:14px;" onclick="closePayPicker()">ยกเลิก</button>
+  </div>
+</div>
+
+<!-- MODAL: SINGLE PAY SELECTOR -->
+<div id="modal-single-selector" class="modal-overlay hidden" onclick="if(event.target===this)closeSingleSelector()">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">เลือกรายการที่จะชำระ</div>
+    <div class="modal-sub">แตะรายการเพื่อชำระ</div>
+    <div id="single-selector-list" style="display:flex;flex-direction:column;gap:8px;max-height:65vh;overflow-y:auto;"></div>
+    <button class="btn-ghost" style="width:100%;margin-top:16px;" onclick="closeSingleSelector()">ยกเลิก</button>
+  </div>
+</div>
+
+<!-- MODAL: BORROW -->
+<div id="modal-borrow" class="modal-overlay hidden" onclick="if(event.target===this)closeBorrowModal()">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">เพิ่มรายการยืม 💸</div>
+    <div class="modal-sub">บันทึกการยืมเงินใหม่</div>
+
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <label class="form-label">ชื่อผู้ยืม / รายการ</label>
+        <input id="b-name" type="text" class="input-field" placeholder="เช่น สมชาย ค่าข้าว">
+      </div>
+      <div>
+        <label class="form-label">จำนวนเงิน (บาท)</label>
+        <input id="b-amount" type="number" class="input-field" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div>
+        <label class="form-label">หมวดหมู่</label>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;" id="cat-selector">
+          <div class="cat-chip cat-food"      data-cat="food"      onclick="selectCat('food')"><span>🍜</span> อาหาร</div>
+          <div class="cat-chip cat-household" data-cat="household" onclick="selectCat('household')"><span>🏠</span> ของใช้</div>
+          <div class="cat-chip cat-medicine"  data-cat="medicine"  onclick="selectCat('medicine')"><span>💊</span> ค่ายา</div>
+          <div class="cat-chip cat-transport" data-cat="transport" onclick="selectCat('transport')"><span>🚗</span> ค่ารถ</div>
+          <div class="cat-chip cat-utility"   data-cat="utility"   onclick="selectCat('utility')"><span>💡</span> สาธารณูปโภค</div>
+          <div class="cat-chip cat-personal"  data-cat="personal"  onclick="selectCat('personal')"><span>👤</span> ส่วนตัว</div>
+          <div class="cat-chip cat-special"   data-cat="special"   onclick="selectCat('special')"><span>🎁</span> พิเศษ</div>
+          <div class="cat-chip cat-other"     data-cat="other"     onclick="selectCat('other')"><span>📌</span> อื่นๆ</div>
+        </div>
+        <div id="special-warn-box" class="special-warn-box">
+          🎁 <strong>หมวดพิเศษ</strong> — รายการนี้ให้เลย ไม่มีการคืนเงิน และไม่นับในยอดหนี้รวม
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <label class="form-label">วันที่ยืม</label>
+          <input id="b-date" type="date" class="input-field">
+        </div>
+        <div>
+          <label class="form-label">เวลา</label>
+          <input id="b-time" type="time" class="input-field">
+        </div>
+      </div>
+      <div>
+        <label class="form-label">หมายเหตุ (ไม่บังคับ)</label>
+        <input id="b-note" type="text" class="input-field" placeholder="รายละเอียดเพิ่มเติม">
+      </div>
+      <div>
+        <label class="form-label">แนบสลิป (ไม่บังคับ)</label>
+        <label for="b-slip" id="b-slip-label" style="display:flex;align-items:center;justify-content:center;gap:8px;background:var(--bg);border:2px dashed var(--border-mid);border-radius:12px;padding:14px;cursor:pointer;transition:border-color 0.2s;color:var(--text-muted);font-size:13px;font-weight:600;" onmouseover="this.style.borderColor='var(--rose-soft)'" onmouseout="this.style.borderColor='var(--border-mid)'">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          เลือกรูปสลิป
+        </label>
+        <input id="b-slip" type="file" accept="image/*" style="display:none;" onchange="previewSlip('b-slip','b-slip-preview','b-slip-label')">
+        <div id="b-slip-preview" style="display:none;margin-top:8px;position:relative;">
+          <img id="b-slip-img" style="width:100%;border-radius:12px;max-height:160px;object-fit:cover;border:1.5px solid var(--border);">
+          <button onclick="clearSlip('b-slip','b-slip-preview','b-slip-label')" style="position:absolute;top:6px;right:6px;background:rgba(255,255,255,0.9);border:none;border-radius:50%;width:26px;height:26px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.15);">✕</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button class="btn-ghost" style="flex:1;" onclick="closeBorrowModal()">ยกเลิก</button>
+      <button onclick="saveBorrow()" class="btn-primary" style="flex:2;">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: SINGLE PAY -->
+<div id="modal-pay" class="modal-overlay hidden" onclick="if(event.target===this)closePayModal()">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">บันทึกการชำระ 💚</div>
+    <div id="pay-loan-name" style="font-size:13px;color:var(--text-muted);margin-bottom:18px;"></div>
+
+    <div class="card-inner" style="display:flex;justify-content:space-between;margin-bottom:16px;">
+      <div>
+        <div style="font-size:11px;color:var(--text-muted);">ยืมทั้งหมด</div>
+        <div id="pay-total-amt" style="font-size:16px;font-weight:700;color:var(--text);">฿0</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:11px;color:var(--text-muted);">คงค้าง</div>
+        <div id="pay-remain-amt" style="font-size:16px;font-weight:700;color:var(--rose);">฿0</div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <label class="form-label">จำนวนที่ชำระ (บาท)</label>
+        <input id="p-amount" type="number" class="input-field" placeholder="0.00" min="0.01" step="0.01">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <label class="form-label">วันที่ชำระ</label>
+          <input id="p-date" type="date" class="input-field">
+        </div>
+        <div>
+          <label class="form-label">เวลา</label>
+          <input id="p-time" type="time" class="input-field">
+        </div>
+      </div>
+      <div>
+        <label class="form-label">หมายเหตุ (ไม่บังคับ)</label>
+        <input id="p-note" type="text" class="input-field" placeholder="เช่น โอน PromptPay">
+      </div>
+      <div>
+        <label class="form-label">แนบสลิป (ไม่บังคับ)</label>
+        <label for="p-slip" id="p-slip-label" style="display:flex;align-items:center;justify-content:center;gap:8px;background:var(--bg);border:2px dashed var(--border-mid);border-radius:12px;padding:14px;cursor:pointer;transition:border-color 0.2s;color:var(--text-muted);font-size:13px;font-weight:600;" onmouseover="this.style.borderColor='#059669'" onmouseout="this.style.borderColor='var(--border-mid)'">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          เลือกรูปสลิป
+        </label>
+        <input id="p-slip" type="file" accept="image/*" style="display:none;" onchange="previewSlip('p-slip','p-slip-preview','p-slip-label')">
+        <div id="p-slip-preview" style="display:none;margin-top:8px;position:relative;">
+          <img id="p-slip-img" style="width:100%;border-radius:12px;max-height:160px;object-fit:cover;border:1.5px solid var(--border);">
+          <button onclick="clearSlip('p-slip','p-slip-preview','p-slip-label')" style="position:absolute;top:6px;right:6px;background:rgba(255,255,255,0.9);border:none;border-radius:50%;width:26px;height:26px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.15);">✕</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button class="btn-ghost" style="flex:1;" onclick="closePayModal()">ยกเลิก</button>
+      <button onclick="savePayment()" class="btn-green" style="flex:2;padding:14px;font-family:'Prompt',sans-serif;font-size:15px;font-weight:700;border-radius:14px;width:auto;cursor:pointer;">ชำระเงิน</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: BULK PAY -->
+<div id="modal-bulk-pay" class="modal-overlay hidden" onclick="if(event.target===this)closeBulkPayModal()">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">ชำระโดยรวม 💚</div>
+    <div id="bulk-selected-label" class="modal-sub"></div>
+
+    <div id="bulk-loans-preview" style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;max-height:180px;overflow-y:auto;"></div>
+
+    <div class="card-inner" style="display:flex;justify-content:space-between;margin-bottom:16px;">
+      <div>
+        <div style="font-size:11px;color:var(--text-muted);">รวมยอดคงค้าง</div>
+        <div id="bulk-total-remain" style="font-size:20px;font-weight:700;color:var(--rose);">฿0</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:11px;color:var(--text-muted);">ชำระทั้งหมด</div>
+        <div id="bulk-full-badge" style="font-size:12px;font-weight:700;color:var(--success);padding:4px 10px;background:var(--success-bg);border-radius:99px;"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <label class="form-label">จำนวนที่ชำระรวม (บาท)</label>
+        <div style="position:relative;">
+          <input id="bp-amount" type="number" class="input-field" placeholder="0.00" min="0.01" step="0.01" oninput="onBulkAmountInput()">
+          <button onclick="fillBulkFull()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:var(--pink-light);color:#9D174D;border:none;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;">เต็มจำนวน</button>
+        </div>
+        <div id="bp-dist-preview" style="font-size:11px;color:var(--text-muted);margin-top:6px;line-height:1.8;"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <label class="form-label">วันที่ชำระ</label>
+          <input id="bp-date" type="date" class="input-field">
+        </div>
+        <div>
+          <label class="form-label">เวลา</label>
+          <input id="bp-time" type="time" class="input-field">
+        </div>
+      </div>
+      <div>
+        <label class="form-label">หมายเหตุ (ไม่บังคับ)</label>
+        <input id="bp-note" type="text" class="input-field" placeholder="เช่น โอนรวม 2 รายการ">
+      </div>
+      <div>
+        <label class="form-label">แนบสลิป (ไม่บังคับ)</label>
+        <label for="bp-slip" id="bp-slip-label" style="display:flex;align-items:center;justify-content:center;gap:8px;background:var(--bg);border:2px dashed var(--border-mid);border-radius:12px;padding:14px;cursor:pointer;transition:border-color 0.2s;color:var(--text-muted);font-size:13px;font-weight:600;" onmouseover="this.style.borderColor='#059669'" onmouseout="this.style.borderColor='var(--border-mid)'">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          เลือกรูปสลิป
+        </label>
+        <input id="bp-slip" type="file" accept="image/*" style="display:none;" onchange="previewSlip('bp-slip','bp-slip-preview','bp-slip-label')">
+        <div id="bp-slip-preview" style="display:none;margin-top:8px;position:relative;">
+          <img id="bp-slip-img" style="width:100%;border-radius:12px;max-height:160px;object-fit:cover;border:1.5px solid var(--border);">
+          <button onclick="clearSlip('bp-slip','bp-slip-preview','bp-slip-label')" style="position:absolute;top:6px;right:6px;background:rgba(255,255,255,0.9);border:none;border-radius:50%;width:26px;height:26px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.15);">✕</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button class="btn-ghost" style="flex:1;" onclick="closeBulkPayModal()">ยกเลิก</button>
+      <button onclick="saveBulkPayment()" class="btn-green" style="flex:2;padding:14px;font-family:'Prompt',sans-serif;font-size:15px;font-weight:700;border-radius:14px;width:auto;cursor:pointer;">ชำระรวม</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: DETAIL -->
+<div id="modal-detail" class="modal-overlay hidden" onclick="if(event.target===this)closeDetailModal()">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;">
+      <div>
+        <div id="det-name" style="font-family:'Prompt',sans-serif;font-size:18px;font-weight:700;color:var(--text);"></div>
+        <div id="det-cat-badge" style="margin-top:6px;"></div>
+      </div>
+      <div id="det-status-badge" style="font-size:11px;padding:5px 12px;border-radius:99px;font-weight:700;flex-shrink:0;"></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;" id="det-amounts-grid">
+      <div class="card-inner">
+        <div style="font-size:10px;color:var(--text-muted);">ยืมทั้งหมด</div>
+        <div id="det-total" style="font-size:20px;font-weight:700;margin-top:3px;color:var(--text);"></div>
+      </div>
+      <div class="card-inner">
+        <div style="font-size:10px;color:var(--text-muted);">คงค้าง</div>
+        <div id="det-remain" style="font-size:20px;font-weight:700;margin-top:3px;"></div>
+      </div>
+    </div>
+
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;"><span id="det-borrow-dt"></span></div>
+    <div id="det-note-row" style="font-size:12px;color:var(--text-muted);margin-bottom:14px;display:none;"></div>
+
+    <div id="det-special-notice" style="background:#FFF7ED;border:1.5px solid #FED7AA;border-radius:12px;padding:12px 14px;font-size:12px;color:#92400E;margin-bottom:14px;display:none;line-height:1.6;">
+      🎁 รายการนี้เป็นหมวด <strong>พิเศษ</strong> — ให้เลยไม่ต้องคืน ไม่นับในยอดหนี้รวม
+    </div>
+
+    <div class="section-title" style="margin-bottom:10px;">ประวัติการชำระ</div>
+    <div id="det-payments" style="display:flex;flex-direction:column;gap:8px;max-height:200px;overflow-y:auto;margin-bottom:16px;"></div>
+    <div id="det-no-payments" style="font-size:13px;color:var(--text-muted);text-align:center;padding:16px;">ยังไม่มีประวัติการชำระ</div>
+
+    <div id="det-pay-btn-area"></div>
+
+    <!-- Edit + Delete buttons -->
+    <div style="margin-top:12px;padding-top:12px;border-top:1.5px solid var(--border);display:flex;gap:8px;">
+      <button class="btn-bulk" style="flex:1;justify-content:center;padding:10px;" onclick="openEditModal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        แก้ไข
+      </button>
+      <button id="det-delete-btn" class="btn-danger" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="promptDeleteLoan()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        ลบรายการ
+      </button>
+    </div>
+
+    <button class="btn-ghost" style="width:100%;margin-top:10px;" onclick="closeDetailModal()">ปิด</button>
+  </div>
+</div>
+
+<!-- MODAL: SLIP VIEWER -->
+<div id="modal-slip-viewer" class="confirm-overlay hidden" onclick="closeSlipViewer()" style="align-items:center;padding:16px;">
+  <div style="position:relative;max-width:420px;width:100%;animation:popIn 0.2s ease;">
+    <img id="slip-viewer-img" style="width:100%;border-radius:18px;max-height:80vh;object-fit:contain;box-shadow:0 20px 60px rgba(0,0,0,0.4);">
+    <button onclick="closeSlipViewer()" style="position:absolute;top:-12px;right:-12px;background:#fff;border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.2);">✕</button>
+  </div>
+</div>
+
+<!-- MODAL: EDIT LOAN -->
+<div id="modal-edit" class="modal-overlay hidden" onclick="if(event.target===this)closeEditModal()">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">แก้ไขรายการ ✏️</div>
+    <div class="modal-sub">แก้ไขข้อมูลการยืม</div>
+
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <label class="form-label">ชื่อผู้ยืม / รายการ</label>
+        <input id="e-name" type="text" class="input-field" placeholder="เช่น สมชาย ค่าข้าว">
+      </div>
+      <div>
+        <label class="form-label">จำนวนเงิน (บาท)</label>
+        <input id="e-amount" type="number" class="input-field" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div>
+        <label class="form-label">หมวดหมู่</label>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;" id="e-cat-selector">
+          <div class="cat-chip cat-food"      data-cat="food"      onclick="selectEditCat('food')">🍜 อาหาร</div>
+          <div class="cat-chip cat-household" data-cat="household" onclick="selectEditCat('household')">🏠 ของใช้</div>
+          <div class="cat-chip cat-medicine"  data-cat="medicine"  onclick="selectEditCat('medicine')">💊 ค่ายา</div>
+          <div class="cat-chip cat-transport" data-cat="transport" onclick="selectEditCat('transport')">🚗 ค่ารถ</div>
+          <div class="cat-chip cat-utility"   data-cat="utility"   onclick="selectEditCat('utility')">💡 สาธารณูปโภค</div>
+          <div class="cat-chip cat-personal"  data-cat="personal"  onclick="selectEditCat('personal')">👤 ส่วนตัว</div>
+          <div class="cat-chip cat-special"   data-cat="special"   onclick="selectEditCat('special')">🎁 พิเศษ</div>
+          <div class="cat-chip cat-other"     data-cat="other"     onclick="selectEditCat('other')">📌 อื่นๆ</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <label class="form-label">วันที่ยืม</label>
+          <input id="e-date" type="date" class="input-field">
+        </div>
+        <div>
+          <label class="form-label">เวลา</label>
+          <input id="e-time" type="time" class="input-field">
+        </div>
+      </div>
+      <div>
+        <label class="form-label">หมายเหตุ (ไม่บังคับ)</label>
+        <input id="e-note" type="text" class="input-field" placeholder="รายละเอียดเพิ่มเติม">
+      </div>
+    </div>
+
+    <!-- Edit payment history -->
+    <div id="e-payments-section" style="margin-top:18px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="section-title" style="margin-bottom:0;">ประวัติการชำระ</div>
+      </div>
+      <div id="e-payments-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <div id="e-no-payments" style="font-size:13px;color:var(--text-muted);text-align:center;padding:12px;">ยังไม่มีประวัติ</div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button class="btn-ghost" style="flex:1;" onclick="closeEditModal()">ยกเลิก</button>
+      <button onclick="saveEdit()" class="btn-primary" style="flex:2;">บันทึกการแก้ไข</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: EDIT PAYMENT -->
+<div id="modal-edit-payment" class="modal-overlay hidden" onclick="if(event.target===this)closeEditPayment()">
+  <div class="modal-sheet" style="padding-bottom:32px;">
+    <div class="modal-handle"></div>
+    <div class="modal-title">แก้ไขการชำระ ✏️</div>
+    <div class="modal-sub">แก้ไขข้อมูลการชำระครั้งนี้</div>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <label class="form-label">จำนวนที่ชำระ (บาท)</label>
+        <input id="ep-amount" type="number" class="input-field" placeholder="0.00" min="0.01" step="0.01">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <label class="form-label">วันที่ชำระ</label>
+          <input id="ep-date" type="date" class="input-field">
+        </div>
+        <div>
+          <label class="form-label">เวลา</label>
+          <input id="ep-time" type="time" class="input-field">
+        </div>
+      </div>
+      <div>
+        <label class="form-label">หมายเหตุ</label>
+        <input id="ep-note" type="text" class="input-field" placeholder="เช่น โอน PromptPay">
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button class="btn-ghost" style="flex:1;" onclick="closeEditPayment()">ยกเลิก</button>
+      <button onclick="saveEditPayment()" class="btn-green" style="flex:2;padding:14px;font-family:'Prompt',sans-serif;font-size:15px;font-weight:700;border-radius:14px;width:auto;cursor:pointer;">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM: DELETE -->
+<div id="confirm-delete" class="confirm-overlay hidden">
+  <div class="confirm-box">
+    <div style="font-size:36px;margin-bottom:12px;">🗑️</div>
+    <div style="font-family:'Prompt',sans-serif;font-size:17px;font-weight:700;color:var(--text);margin-bottom:8px;">ลบรายการนี้?</div>
+    <div id="confirm-delete-name" style="font-size:13px;color:var(--text-muted);margin-bottom:6px;"></div>
+    <div style="font-size:12px;color:#9F1239;background:#FFF1F2;border-radius:10px;padding:10px;margin-bottom:20px;line-height:1.6;">
+      ข้อมูลรายการและประวัติการชำระทั้งหมดจะถูกลบถาวร ไม่สามารถกู้คืนได้
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn-ghost" style="flex:1;" onclick="cancelDelete()">ยกเลิก</button>
+      <button onclick="confirmDelete()" style="flex:1;background:linear-gradient(135deg,#9F1239,#E8184A);color:#fff;border:none;border-radius:14px;padding:14px;font-family:'Prompt',sans-serif;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(159,18,57,0.35);">ลบเลย</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===================== DATA =====================
+let loans = JSON.parse(localStorage.getItem('dt_loans') || '[]');
+let selectedCat = '';
+let currentPayLoanId = null;
+let currentDetailLoanId = null;
+let pendingDeleteId = null;
+let currentFilter = 'all';
+let bulkMode = false;
+let selectedBulkIds = new Set();
+
+const CAT_CONFIG = {
+  food:      { label: 'อาหาร',         cls: 'cat-food',      icon: '🍜' },
+  household: { label: 'ของใช้',         cls: 'cat-household', icon: '🏠' },
+  medicine:  { label: 'ค่ายา',          cls: 'cat-medicine',  icon: '💊' },
+  transport: { label: 'ค่ารถ',          cls: 'cat-transport', icon: '🚗' },
+  utility:   { label: 'สาธารณูปโภค',   cls: 'cat-utility',   icon: '💡' },
+  personal:  { label: 'ส่วนตัว',        cls: 'cat-personal',  icon: '👤' },
+  special:   { label: 'พิเศษ',          cls: 'cat-special',   icon: '🎁', isGift: true },
+  other:     { label: 'อื่นๆ',          cls: 'cat-other',     icon: '📌' },
+};
+
+function genId()    { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+function fmtMoney(n){ return '฿' + Number(n).toLocaleString('th-TH', { minimumFractionDigits: 2 }); }
+function fmtDatetime(d, t) {
+  if (!d) return '-';
+  const mo = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const [y, m, dd] = d.split('-');
+  return `${parseInt(dd)} ${mo[parseInt(m)-1]} ${parseInt(y)+543}${t ? ' '+t : ''}`;
+}
+function saveLoans(){ localStorage.setItem('dt_loans', JSON.stringify(loans)); }
+function isGift(l)  { return l.category === 'special'; }
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ===================== SCREEN =====================
+function switchScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  if (name === 'stats') renderStats();
+}
+
+// ===================== FILTER =====================
+function buildFilterRow() {
+  const row = document.getElementById('filter-row');
+  row.querySelectorAll('.dyn-filter').forEach(el => el.remove());
+  const used = [...new Set(loans.map(l => l.category))];
+  used.forEach(cat => {
+    const cfg = CAT_CONFIG[cat]; if (!cfg) return;
+    const btn = document.createElement('button');
+    btn.className = 'cat-chip dyn-filter ' + cfg.cls + (currentFilter === cat ? ' selected' : '');
+    btn.onclick = () => setFilter(cat);
+    btn.innerHTML = `${cfg.icon} ${cfg.label}`;
+    row.appendChild(btn);
+  });
+}
+function setFilter(f) {
+  currentFilter = f;
+  buildFilterRow();
+  const all = document.getElementById('filter-all');
+  if (f === 'all') { all.classList.add('selected'); all.style.background='var(--rose)'; all.style.color='#fff'; all.style.borderColor='var(--rose)'; }
+  else { all.classList.remove('selected'); all.style.background=''; all.style.color=''; all.style.borderColor=''; }
+  renderLoans();
+}
+
+// ===================== BULK =====================
+function exitBulkMode() {
+  bulkMode = false; selectedBulkIds.clear();
+  document.getElementById('bulk-bar').classList.add('hidden');
+  const eb = document.getElementById('bulk-exit-btn'); if (eb) eb.style.display = 'none';
+  renderLoans();
+}
+function enterBulkFromPicker() {
+  openBulkPayModal();
+}
+function toggleBulkSelect(id) {
+  if (selectedBulkIds.has(id)) selectedBulkIds.delete(id); else selectedBulkIds.add(id);
+  document.getElementById('bulk-count-label').textContent = `เลือก ${selectedBulkIds.size} รายการ`;
+  renderLoans();
+}
+function selectAllLoans() {
+  loans.filter(l => !isGift(l) && (l.amount - l.paid) > 0).forEach(l => selectedBulkIds.add(l.id));
+  document.getElementById('bulk-count-label').textContent = `เลือก ${selectedBulkIds.size} รายการ`;
+  renderLoans();
+}
+
+// ===================== RENDER =====================
+function renderLoans() {
+  const list  = document.getElementById('loan-list');
+  const empty = document.getElementById('empty-state');
+  const debtLoans = loans.filter(l => !isGift(l));
+  const totalDebt = debtLoans.reduce((s,l) => s+(l.amount-l.paid), 0);
+  document.getElementById('total-debt-display').textContent = fmtMoney(totalDebt);
+  document.getElementById('header-total').textContent       = fmtMoney(totalDebt);
+  document.getElementById('stat-total').textContent   = loans.length;
+  document.getElementById('stat-paid').textContent    = debtLoans.filter(l => l.amount-l.paid <= 0).length;
+  document.getElementById('stat-unpaid').textContent  = debtLoans.filter(l => l.amount-l.paid >  0).length;
+  // Cumulative: sum of ALL loan amounts ever recorded (never decreases)
+  const cumulative = loans.reduce((s, l) => s + l.amount, 0);
+  document.getElementById('stat-cumulative').textContent = fmtMoney(cumulative);
+
+  let filtered = currentFilter === 'all' ? loans : loans.filter(l => l.category === currentFilter);
+  filtered = filtered.slice().sort((a,b) => {
+    if (isGift(a) !== isGift(b)) return isGift(a) ? 1 : -1;
+    const ra = a.amount-a.paid, rb = b.amount-b.paid;
+    if ((ra>0) !== (rb>0)) return ra>0 ? -1 : 1;
+    return (b.borrowDate||'').localeCompare(a.borrowDate||'');
+  });
+
+  if (!filtered.length) { list.innerHTML=''; empty.style.display=''; return; }
+  empty.style.display = 'none';
+  list.innerHTML = '';
+
+  filtered.forEach(loan => {
+    const gift   = isGift(loan);
+    const remain = gift ? 0 : (loan.amount - loan.paid);
+    const pct    = loan.amount > 0 ? Math.min(100,(loan.paid/loan.amount)*100) : 100;
+    const isPaid = remain <= 0 && !gift;
+    const cfg    = CAT_CONFIG[loan.category] || CAT_CONFIG.other;
+    const isSel  = selectedBulkIds.has(loan.id);
+
+    const checkHtml = bulkMode && !gift
+      ? `<input type="checkbox" class="loan-check" ${isSel?'checked':''} onchange="toggleBulkSelect('${loan.id}')" onclick="event.stopPropagation()" style="margin-top:2px;">`
+      : '';
+
+    let rightHtml;
+    if (gift) {
+      rightHtml = `<div style="font-size:14px;font-weight:700;color:#C2410C;">🎁 ของขวัญ</div><div style="font-size:10px;color:var(--text-muted);">${fmtMoney(loan.amount)}</div>`;
+    } else {
+      rightHtml = `<div style="font-family:'Prompt',sans-serif;font-size:16px;font-weight:700;color:${isPaid?'var(--success)':'var(--rose)'};">${isPaid?'ชำระครบ ✓':fmtMoney(remain)}</div><div style="font-size:10px;color:var(--text-muted);">จาก ${fmtMoney(loan.amount)}</div>`;
+    }
+
+    const progressHtml = gift
+      ? `<div class="progress-bar-outer"><div class="progress-bar-inner special" style="width:100%;"></div></div>`
+      : `<div class="progress-bar-outer"><div class="progress-bar-inner${isPaid?' done':''}" style="width:${pct}%;"></div></div>`;
+
+    const el = document.createElement('div');
+    el.className = 'loan-record' + (isPaid&&!gift?' paid':'') + (gift?' special-gift':'');
+    el.innerHTML = `
+      <div style="display:flex;align-items:flex-start;gap:10px;">
+        ${checkHtml}
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);">${escHtml(loan.name)}</div>
+              <div style="display:flex;align-items:center;gap:6px;margin-top:5px;flex-wrap:wrap;">
+                <span class="cat-badge ${cfg.cls}">${cfg.icon} ${cfg.label}</span>
+                <span style="font-size:11px;color:var(--text-muted);">${fmtDatetime(loan.borrowDate,loan.borrowTime)}</span>
+              </div>
+              ${loan.note?`<div style="font-size:11px;color:var(--text-muted);margin-top:3px;">${escHtml(loan.note)}</div>`:''}
+            </div>
+            <div style="text-align:right;flex-shrink:0;">${rightHtml}</div>
+          </div>
+          ${progressHtml}
+          <div style="margin-top:12px;">
+            <button onclick="openDetailModal('${loan.id}')" style="width:100%;padding:9px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--text-mid);font-size:12px;font-weight:600;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='var(--bg-raised)'" onmouseout="this.style.background='transparent'">ดูรายละเอียด</button>
+          </div>
+        </div>
+      </div>`;
+    list.appendChild(el);
+  });
+}
+
+// ===================== ACTION PICKER =====================
+function openActionPicker()  { document.getElementById('modal-action').classList.remove('hidden'); }
+function closeActionPicker() { document.getElementById('modal-action').classList.add('hidden'); }
+
+function openPayFromPicker() {
+  const hasDebt = loans.some(l => !isGift(l) && (l.amount-l.paid) > 0);
+  if (!hasDebt) { showToast('ยอดหนี้รวมเป็น 0 แล้ว ไม่มีอะไรต้องชำระ', 'warn'); return; }
+  document.getElementById('modal-pay-picker').classList.remove('hidden');
+}
+function closePayPicker() { document.getElementById('modal-pay-picker').classList.add('hidden'); }
+
+function openSinglePayPicker() {
+  const eligible = loans.filter(l => !isGift(l) && (l.amount-l.paid)>0);
+  if (!eligible.length) { showToast('ไม่มีรายการที่ค้างชำระ', 'warn'); return; }
+  const list = document.getElementById('single-selector-list');
+  list.innerHTML = '';
+  eligible.forEach(loan => {
+    const remain = loan.amount-loan.paid;
+    const cfg = CAT_CONFIG[loan.category] || CAT_CONFIG.other;
+    const row = document.createElement('button');
+    row.className = 'pick-btn';
+    row.onclick = () => { closeSingleSelector(); openPayModal(loan.id); };
+    row.innerHTML = `
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(loan.name)}</div>
+        <span class="cat-badge ${cfg.cls}" style="margin-top:4px;">${cfg.icon} ${cfg.label}</span>
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-family:'Prompt',sans-serif;font-size:15px;font-weight:700;color:var(--rose);">${fmtMoney(remain)}</div>
+        <div style="font-size:10px;color:var(--text-muted);">คงค้าง</div>
+      </div>`;
+    list.appendChild(row);
+  });
+  document.getElementById('modal-single-selector').classList.remove('hidden');
+}
+function closeSingleSelector() { document.getElementById('modal-single-selector').classList.add('hidden'); }
+
+// ===================== BORROW MODAL =====================
+function openBorrowModal() {
+  const now = new Date();
+  document.getElementById('b-date').value = now.toISOString().split('T')[0];
+  document.getElementById('b-time').value = now.toTimeString().slice(0,5);
+  ['b-name','b-amount','b-note'].forEach(id => document.getElementById(id).value = '');
+  selectedCat = '';
+  document.querySelectorAll('#cat-selector .cat-chip').forEach(c => c.classList.remove('selected'));
+  document.getElementById('special-warn-box').style.display = 'none';
+  clearSlip('b-slip','b-slip-preview','b-slip-label');
+  document.getElementById('modal-borrow').classList.remove('hidden');
+}
+function closeBorrowModal() { document.getElementById('modal-borrow').classList.add('hidden'); }
+
+function selectCat(cat) {
+  selectedCat = cat;
+  document.querySelectorAll('#cat-selector .cat-chip').forEach(c => c.classList.toggle('selected', c.dataset.cat === cat));
+  document.getElementById('special-warn-box').style.display = cat === 'special' ? 'block' : 'none';
+}
+
+function saveBorrow() {
+  const name = document.getElementById('b-name').value.trim();
+  const amount = parseFloat(document.getElementById('b-amount').value);
+  const borrowDate = document.getElementById('b-date').value;
+  const borrowTime = document.getElementById('b-time').value;
+  const note = document.getElementById('b-note').value.trim();
+  if (!name)            { showToast('กรุณากรอกชื่อผู้ยืม', 'error'); return; }
+  if (!amount||amount<=0){ showToast('กรุณากรอกจำนวนเงิน', 'error'); return; }
+  if (!selectedCat)     { showToast('กรุณาเลือกหมวดหมู่', 'warn');  return; }
+  if (!borrowDate)      { showToast('กรุณาเลือกวันที่',    'warn');  return; }
+  const paid = selectedCat === 'special' ? amount : 0;
+  const slipImg = getSlipBase64('b-slip-img');
+  loans.push({ id:genId(), name, amount, paid, category:selectedCat, borrowDate, borrowTime, note, slip: slipImg, payments:[] });
+  saveLoans(); buildFilterRow(); renderLoans();
+  closeBorrowModal();
+  showToast(selectedCat==='special' ? 'บันทึกรายการพิเศษ 🎁' : 'บันทึกรายการยืมเรียบร้อย', 'success');
+}
+
+// ===================== SLIP HELPERS =====================
+function previewSlip(inputId, previewId, labelId) {
+  const file = document.getElementById(inputId).files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const imgEl = document.getElementById(inputId.replace('slip','slip-img'));
+    imgEl.src = e.target.result;
+    document.getElementById(previewId).style.display = 'block';
+    const lbl = document.getElementById(labelId);
+    lbl.style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+function clearSlip(inputId, previewId, labelId) {
+  const inp = document.getElementById(inputId);
+  if (inp) inp.value = '';
+  const prev = document.getElementById(previewId);
+  if (prev) { prev.style.display = 'none'; const img = prev.querySelector('img'); if (img) img.src=''; }
+  const lbl = document.getElementById(labelId);
+  if (lbl) lbl.style.display = '';
+}
+function getSlipBase64(imgElId) {
+  const img = document.getElementById(imgElId);
+  return (img && img.src && img.src.startsWith('data:')) ? img.src : null;
+}
+function openSlipViewer(src) {
+  document.getElementById('slip-viewer-img').src = src;
+  document.getElementById('modal-slip-viewer').classList.remove('hidden');
+}
+function closeSlipViewer() { document.getElementById('modal-slip-viewer').classList.add('hidden'); }
+
+// ===================== PAY MODAL =====================
+function openPayModal(loanId) {
+  const loan = loans.find(l => l.id === loanId);
+  if (!loan || isGift(loan)) return;
+  const remain = loan.amount - loan.paid;
+  if (remain <= 0) { showToast('รายการนี้ชำระครบแล้ว', 'warn'); return; }
+  currentPayLoanId = loanId;
+  document.getElementById('pay-loan-name').textContent = loan.name;
+  document.getElementById('pay-total-amt').textContent = fmtMoney(loan.amount);
+  document.getElementById('pay-remain-amt').textContent = fmtMoney(remain);
+  document.getElementById('p-amount').value = ''; document.getElementById('p-amount').max = remain;
+  document.getElementById('p-note').value = '';
+  const now = new Date();
+  document.getElementById('p-date').value = now.toISOString().split('T')[0];
+  document.getElementById('p-time').value = now.toTimeString().slice(0,5);
+  clearSlip('p-slip','p-slip-preview','p-slip-label');
+  document.getElementById('modal-pay').classList.remove('hidden');
+}
+function closePayModal() {
+  document.getElementById('modal-pay').classList.add('hidden');
+  clearSlip('p-slip','p-slip-preview','p-slip-label');
+  currentPayLoanId = null;
+}
+
+function savePayment() {
+  if (!currentPayLoanId) return;
+  const loan = loans.find(l => l.id === currentPayLoanId);
+  if (!loan) return;
+  const totalDebt = loans.filter(l => !isGift(l)).reduce((s,l) => s+(l.amount-l.paid), 0);
+  if (totalDebt <= 0) { showToast('ยอดหนี้รวมเป็น 0 แล้ว ไม่มีอะไรต้องชำระ', 'warn'); return; }
+  const remain = loan.amount - loan.paid;
+  if (remain <= 0)     { showToast('รายการนี้ชำระครบแล้ว', 'warn'); return; }
+  const payAmt  = parseFloat(document.getElementById('p-amount').value);
+  const payDate = document.getElementById('p-date').value;
+  const payTime = document.getElementById('p-time').value;
+  const payNote = document.getElementById('p-note').value.trim();
+  if (!payAmt||payAmt<=0)        { showToast('กรุณากรอกจำนวนเงิน', 'error'); return; }
+  if (payAmt > remain+0.001)     { showToast('เกินยอดคงค้าง ('+fmtMoney(remain)+')', 'error'); return; }
+  if (!payDate)                  { showToast('กรุณาเลือกวันที่', 'warn'); return; }
+  loan.paid += payAmt;
+  const slipImg = getSlipBase64('p-slip-img');
+  loan.payments.push({ id:genId(), amount:payAmt, date:payDate, time:payTime, note:payNote, slip:slipImg });
+  saveLoans(); buildFilterRow(); renderLoans();
+  const nr = loan.amount - loan.paid;
+  closePayModal();
+  showToast(nr<=0 ? 'ชำระทั้งหมดครบแล้ว! 🎉' : 'บันทึกการชำระเรียบร้อย เหลือ '+fmtMoney(nr), 'success');
+}
+
+// ===================== BULK PAY =====================
+function getBulkEligible() { return loans.filter(l=>!isGift(l)&&(l.amount-l.paid)>0); }
+
+function openBulkPayModal() {
+  const eligible = getBulkEligible();
+  if (!eligible.length) { showToast('ไม่มีรายการค้างชำระ', 'warn'); return; }
+  const totalRemain = eligible.reduce((s,l)=>s+(l.amount-l.paid),0);
+  document.getElementById('bulk-selected-label').textContent = `${eligible.length} รายการที่ค้างชำระ`;
+  document.getElementById('bulk-total-remain').textContent = fmtMoney(totalRemain);
+  document.getElementById('bulk-full-badge').textContent = 'ชำระทั้งหมด '+fmtMoney(totalRemain);
+  const preview = document.getElementById('bulk-loans-preview');
+  preview.innerHTML = '';
+  eligible.forEach(l => {
+    const cfg = CAT_CONFIG[l.category]||CAT_CONFIG.other;
+    const row = document.createElement('div');
+    row.style.cssText='display:flex;justify-content:space-between;align-items:center;background:var(--bg-raised);border-radius:10px;padding:8px 12px;';
+    row.innerHTML=`<div><div style="font-size:12px;font-weight:700;">${escHtml(l.name)}</div><span class="cat-badge ${cfg.cls}">${cfg.icon} ${cfg.label}</span></div><div style="font-size:13px;font-weight:700;color:var(--rose);">${fmtMoney(l.amount-l.paid)}</div>`;
+    preview.appendChild(row);
+  });
+  document.getElementById('bp-amount').value='';
+  document.getElementById('bp-note').value='';
+  document.getElementById('bp-dist-preview').textContent='';
+  clearSlip('bp-slip','bp-slip-preview','bp-slip-label');
+  const now=new Date();
+  document.getElementById('bp-date').value=now.toISOString().split('T')[0];
+  document.getElementById('bp-time').value=now.toTimeString().slice(0,5);
+  document.getElementById('modal-bulk-pay').classList.remove('hidden');
+}
+function closeBulkPayModal() { document.getElementById('modal-bulk-pay').classList.add('hidden'); }
+
+function fillBulkFull() {
+  const t=getBulkEligible().reduce((s,l)=>s+(l.amount-l.paid),0);
+  document.getElementById('bp-amount').value=t.toFixed(2);
+  onBulkAmountInput();
+}
+function onBulkAmountInput() {
+  const eligible=getBulkEligible();
+  const totalRemain=eligible.reduce((s,l)=>s+(l.amount-l.paid),0);
+  const entered=parseFloat(document.getElementById('bp-amount').value)||0;
+  const prev=document.getElementById('bp-dist-preview');
+  if (entered<=0||!eligible.length) { prev.textContent=''; return; }
+  const lines=eligible.map(l=>{
+    const rem=l.amount-l.paid;
+    const share=(entered>=totalRemain)?rem:Math.min(rem,parseFloat(((rem/totalRemain)*entered).toFixed(2)));
+    return `${escHtml(l.name)}: ${fmtMoney(share)}`;
+  });
+  prev.innerHTML='<div style="color:var(--text-muted);font-size:10px;margin-bottom:3px;">การแบ่งชำระ (สัดส่วน)</div>'+lines.join('<br>');
+}
+function saveBulkPayment() {
+  const eligible=getBulkEligible();
+  if (!eligible.length) { showToast('ไม่มีรายการที่ต้องชำระ','warn'); return; }
+  const totalRemain=eligible.reduce((s,l)=>s+(l.amount-l.paid),0);
+  const payTotal=parseFloat(document.getElementById('bp-amount').value);
+  const payDate=document.getElementById('bp-date').value;
+  const payTime=document.getElementById('bp-time').value;
+  const payNote=document.getElementById('bp-note').value.trim();
+  const slipImg=getSlipBase64('bp-slip-img');
+  if (!payTotal||payTotal<=0) { showToast('กรุณากรอกจำนวนเงิน','error'); return; }
+  if (payTotal>totalRemain+0.01) { showToast('เกินยอดรวม ('+fmtMoney(totalRemain)+')','error'); return; }
+  if (!payDate) { showToast('กรุณาเลือกวันที่','warn'); return; }
+  let distributed=0;
+  eligible.forEach((loan,i)=>{
+    const rem=loan.amount-loan.paid;
+    let share=(i===eligible.length-1)
+      ? Math.min(rem,parseFloat((payTotal-distributed).toFixed(2)))
+      : (payTotal>=totalRemain)?rem:Math.min(rem,parseFloat(((rem/totalRemain)*payTotal).toFixed(2)));
+    if (share>0) {
+      loan.paid+=share;
+      loan.payments.push({id:genId(),amount:share,date:payDate,time:payTime,note:payNote?`[ชำระรวม] ${payNote}`:'[ชำระรวม]',slip:slipImg});
+      distributed+=share;
+    }
+  });
+  saveLoans(); buildFilterRow(); renderLoans();
+  closeBulkPayModal(); exitBulkMode();
+  showToast((totalRemain-payTotal)<=0.01?'ชำระรวมทั้งหมดครบแล้ว! 🎉':'ชำระรวม '+fmtMoney(payTotal)+' เรียบร้อย','success');
+}
+
+// ===================== DETAIL MODAL =====================
+function openDetailModal(loanId) {
+  const loan = loans.find(l => l.id === loanId);
+  if (!loan) return;
+  currentDetailLoanId = loanId;
+  const gift = isGift(loan);
+  const remain = gift ? 0 : (loan.amount - loan.paid);
+  const isPaid = remain <= 0 && !gift;
+  const cfg = CAT_CONFIG[loan.category] || CAT_CONFIG.other;
+
+  document.getElementById('det-name').textContent = loan.name;
+  document.getElementById('det-cat-badge').innerHTML = `<span class="cat-badge ${cfg.cls}">${cfg.icon} ${cfg.label}</span>`;
+
+  if (gift) {
+    document.getElementById('det-status-badge').textContent = '🎁 ของขวัญ';
+    document.getElementById('det-status-badge').style.cssText = 'background:#FFF7ED;color:#C2410C;border:1.5px solid #FED7AA;';
+    document.getElementById('det-special-notice').style.display = 'block';
+    document.getElementById('det-amounts-grid').style.display = 'none';
+  } else {
+    document.getElementById('det-status-badge').textContent = isPaid ? '✓ ชำระครบ' : 'ค้างชำระ';
+    document.getElementById('det-status-badge').style.cssText = isPaid
+      ? 'background:var(--success-bg);color:var(--success);border:1.5px solid #A7F3D0;'
+      : 'background:#FFF1F2;color:#9F1239;border:1.5px solid #FECDD3;';
+    document.getElementById('det-special-notice').style.display = 'none';
+    document.getElementById('det-amounts-grid').style.display = 'grid';
+    document.getElementById('det-total').textContent = fmtMoney(loan.amount);
+    document.getElementById('det-remain').textContent = fmtMoney(remain);
+    document.getElementById('det-remain').style.color = isPaid ? 'var(--success)' : 'var(--rose)';
+  }
+
+  document.getElementById('det-borrow-dt').textContent = 'วันที่บันทึก: ' + fmtDatetime(loan.borrowDate, loan.borrowTime);
+  const noteRow = document.getElementById('det-note-row');
+  if (loan.note) { noteRow.textContent='หมายเหตุ: '+loan.note; noteRow.style.display=''; }
+  else noteRow.style.display='none';
+
+  // Loan slip
+  let detSlipRow = document.getElementById('det-loan-slip-row');
+  if (!detSlipRow) {
+    detSlipRow = document.createElement('div');
+    detSlipRow.id = 'det-loan-slip-row';
+    noteRow.parentNode.insertBefore(detSlipRow, noteRow.nextSibling);
+  }
+  if (loan.slip) {
+    detSlipRow.style.display='';
+    detSlipRow.innerHTML=`<div style="margin-bottom:12px;"><div style="font-size:11px;color:var(--text-muted);font-weight:700;letter-spacing:0.4px;text-transform:uppercase;margin-bottom:6px;">สลิปการยืม</div><img src="${loan.slip}" onclick="openSlipViewer('${loan.slip}')" style="width:100%;border-radius:12px;max-height:140px;object-fit:cover;border:1.5px solid var(--border);cursor:pointer;" title="แตะเพื่อขยาย"></div>`;
+  } else { detSlipRow.style.display='none'; detSlipRow.innerHTML=''; }
+
+  const payList = document.getElementById('det-payments');
+  const noPay   = document.getElementById('det-no-payments');
+  if (loan.payments && loan.payments.length > 0) {
+    noPay.style.display='none'; payList.style.display=''; payList.innerHTML='';
+    loan.payments.forEach((p,i) => {
+      const el=document.createElement('div');
+      el.style.cssText='background:var(--bg-raised);border-radius:12px;padding:12px;';
+      const slipHtml = p.slip
+        ? `<img src="${p.slip}" onclick="openSlipViewer('${p.slip}')" style="width:100%;border-radius:8px;max-height:100px;object-fit:cover;margin-top:8px;cursor:pointer;border:1.5px solid var(--border);" title="แตะเพื่อขยาย">`
+        : '';
+      el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:flex-start;"><div><div style="font-size:12px;color:var(--text-muted);">ครั้งที่ ${i+1} • ${fmtDatetime(p.date,p.time)}</div>${p.note?`<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${escHtml(p.note)}</div>`:''}</div><div style="font-family:'Prompt',sans-serif;font-size:15px;font-weight:700;color:var(--success);flex-shrink:0;">${fmtMoney(p.amount)}</div></div>${slipHtml}`;
+      payList.appendChild(el);
+    });
+  } else { noPay.style.display=''; payList.style.display='none'; }
+
+  const btnArea = document.getElementById('det-pay-btn-area');
+  if (gift) {
+    btnArea.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border-radius:14px;background:#FFF7ED;border:1.5px solid #FED7AA;color:#C2410C;font-weight:700;font-size:14px;">🎁 ให้เลย ไม่คืน</div>`;
+  } else if (isPaid) {
+    btnArea.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border-radius:14px;background:var(--success-bg);border:1.5px solid #A7F3D0;color:var(--success);font-weight:700;font-size:14px;">✓ ชำระทั้งหมดแล้ว</div>`;
+  } else {
+    btnArea.innerHTML=`<button class="btn-green" onclick="closeDetailModal();openPayModal('${loan.id}')" style="padding:14px;font-family:'Prompt',sans-serif;font-size:15px;font-weight:700;border-radius:14px;width:100%;cursor:pointer;">+ บันทึกการชำระ</button>`;
+  }
+
+  document.getElementById('modal-detail').classList.remove('hidden');
+}
+function closeDetailModal() { document.getElementById('modal-detail').classList.add('hidden'); currentDetailLoanId=null; }
+
+// ===================== EDIT LOAN =====================
+let selectedEditCat = '';
+let currentEditPaymentIdx = null;
+
+function openEditModal() {
+  if (!currentDetailLoanId) return;
+  const loan = loans.find(l => l.id === currentDetailLoanId);
+  if (!loan) return;
+  selectedEditCat = loan.category;
+  document.getElementById('e-name').value   = loan.name;
+  document.getElementById('e-amount').value = loan.amount;
+  document.getElementById('e-date').value   = loan.borrowDate || '';
+  document.getElementById('e-time').value   = loan.borrowTime || '';
+  document.getElementById('e-note').value   = loan.note || '';
+  // Select category chip
+  document.querySelectorAll('#e-cat-selector .cat-chip').forEach(c => {
+    c.classList.toggle('selected', c.dataset.cat === loan.category);
+  });
+  // Render payment history editable list
+  renderEditPayments(loan);
+  document.getElementById('modal-edit').classList.remove('hidden');
+}
+function closeEditModal() { document.getElementById('modal-edit').classList.add('hidden'); }
+
+function selectEditCat(cat) {
+  selectedEditCat = cat;
+  document.querySelectorAll('#e-cat-selector .cat-chip').forEach(c => c.classList.toggle('selected', c.dataset.cat === cat));
+}
+
+function renderEditPayments(loan) {
+  const list  = document.getElementById('e-payments-list');
+  const noPay = document.getElementById('e-no-payments');
+  if (!loan.payments || !loan.payments.length) {
+    list.innerHTML = ''; noPay.style.display = ''; return;
+  }
+  noPay.style.display = 'none';
+  list.innerHTML = '';
+  loan.payments.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'background:var(--bg-raised);border-radius:10px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;';
+    row.innerHTML = `
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;color:var(--success);">${fmtMoney(p.amount)}</div>
+        <div style="font-size:11px;color:var(--text-muted);">${fmtDatetime(p.date,p.time)}${p.note?' · '+escHtml(p.note):''}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        <button onclick="openEditPayment(${i})" style="background:var(--pink-light);border:1.5px solid #FBCFE8;color:#9D174D;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;">แก้ไข</button>
+        <button onclick="deletePayment(${i})" style="background:#FFF1F2;border:1.5px solid #FECDD3;color:#9F1239;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;">ลบ</button>
+      </div>`;
+    list.appendChild(row);
+  });
+}
+
+function saveEdit() {
+  if (!currentDetailLoanId) return;
+  const loan = loans.find(l => l.id === currentDetailLoanId);
+  if (!loan) return;
+  const name   = document.getElementById('e-name').value.trim();
+  const amount = parseFloat(document.getElementById('e-amount').value);
+  const date   = document.getElementById('e-date').value;
+  const time   = document.getElementById('e-time').value;
+  const note   = document.getElementById('e-note').value.trim();
+  if (!name)             { showToast('กรุณากรอกชื่อผู้ยืม', 'error'); return; }
+  if (!amount||amount<=0){ showToast('กรุณากรอกจำนวนเงิน', 'error'); return; }
+  if (!selectedEditCat)  { showToast('กรุณาเลือกหมวดหมู่', 'warn');  return; }
+  if (!date)             { showToast('กรุณาเลือกวันที่', 'warn');     return; }
+  // Recalculate paid total from payment history
+  const paidTotal = loan.payments.reduce((s, p) => s + p.amount, 0);
+  const wasGift   = isGift(loan);
+  const nowGift   = selectedEditCat === 'special';
+  loan.name       = name;
+  loan.amount     = amount;
+  loan.category   = selectedEditCat;
+  loan.borrowDate = date;
+  loan.borrowTime = time;
+  loan.note       = note;
+  // If switching to/from special, adjust paid
+  if (nowGift) loan.paid = amount;
+  else loan.paid = Math.min(paidTotal, amount);
+  saveLoans(); buildFilterRow(); renderLoans();
+  closeEditModal();
+  openDetailModal(currentDetailLoanId); // refresh detail view
+  showToast('แก้ไขเรียบร้อย ✨', 'success');
+}
+
+// ===================== EDIT PAYMENT =====================
+function openEditPayment(idx) {
+  if (!currentDetailLoanId) return;
+  const loan = loans.find(l => l.id === currentDetailLoanId);
+  if (!loan || !loan.payments[idx]) return;
+  currentEditPaymentIdx = idx;
+  const p = loan.payments[idx];
+  document.getElementById('ep-amount').value = p.amount;
+  document.getElementById('ep-date').value   = p.date || '';
+  document.getElementById('ep-time').value   = p.time || '';
+  document.getElementById('ep-note').value   = p.note || '';
+  document.getElementById('modal-edit-payment').classList.remove('hidden');
+}
+function closeEditPayment() { document.getElementById('modal-edit-payment').classList.add('hidden'); currentEditPaymentIdx = null; }
+
+function saveEditPayment() {
+  if (!currentDetailLoanId || currentEditPaymentIdx === null) return;
+  const loan = loans.find(l => l.id === currentDetailLoanId);
+  if (!loan) return;
+  const amount = parseFloat(document.getElementById('ep-amount').value);
+  const date   = document.getElementById('ep-date').value;
+  const time   = document.getElementById('ep-time').value;
+  const note   = document.getElementById('ep-note').value.trim();
+  if (!amount||amount<=0) { showToast('กรุณากรอกจำนวนเงิน', 'error'); return; }
+  if (!date)              { showToast('กรุณาเลือกวันที่', 'warn'); return; }
+  loan.payments[currentEditPaymentIdx].amount = amount;
+  loan.payments[currentEditPaymentIdx].date   = date;
+  loan.payments[currentEditPaymentIdx].time   = time;
+  loan.payments[currentEditPaymentIdx].note   = note;
+  // Recalculate paid
+  loan.paid = Math.min(loan.payments.reduce((s,p)=>s+p.amount,0), loan.amount);
+  saveLoans(); renderLoans();
+  closeEditPayment();
+  renderEditPayments(loan); // refresh list in edit modal
+  showToast('แก้ไขการชำระเรียบร้อย', 'success');
+}
+
+function deletePayment(idx) {
+  if (!currentDetailLoanId) return;
+  const loan = loans.find(l => l.id === currentDetailLoanId);
+  if (!loan) return;
+  loan.payments.splice(idx, 1);
+  loan.paid = Math.min(loan.payments.reduce((s,p)=>s+p.amount,0), loan.amount);
+  saveLoans(); renderLoans();
+  renderEditPayments(loan);
+  showToast('ลบการชำระเรียบร้อย', 'success');
+}
+
+// ===================== DELETE =====================
+function promptDeleteLoan() {
+  if (!currentDetailLoanId) return;
+  const loan = loans.find(l => l.id === currentDetailLoanId);
+  if (!loan) return;
+  pendingDeleteId = currentDetailLoanId;
+  document.getElementById('confirm-delete-name').textContent = `"${loan.name}"`;
+  document.getElementById('confirm-delete').classList.remove('hidden');
+}
+function cancelDelete() {
+  pendingDeleteId = null;
+  document.getElementById('confirm-delete').classList.add('hidden');
+}
+function confirmDelete() {
+  if (!pendingDeleteId) return;
+  loans = loans.filter(l => l.id !== pendingDeleteId);
+  pendingDeleteId = null;
+  document.getElementById('confirm-delete').classList.add('hidden');
+  closeDetailModal();
+  saveLoans(); buildFilterRow(); renderLoans();
+  showToast('ลบรายการเรียบร้อย', 'success');
+}
+
+// ===================== STATS =====================
+function renderStats() {
+  const el = document.getElementById('cat-stats-list');
+  el.innerHTML = '';
+  const totals = {};
+  loans.forEach(l => {
+    if (!totals[l.category]) totals[l.category]={borrowed:0,paid:0,count:0,isGift:isGift(l)};
+    totals[l.category].borrowed+=l.amount;
+    totals[l.category].paid+=l.paid;
+    totals[l.category].count++;
+  });
+  if (!Object.keys(totals).length) {
+    el.innerHTML='<div style="text-align:center;padding:50px;color:var(--text-muted);"><div style="font-size:36px;margin-bottom:12px;">🌸</div><div style="font-size:14px;">ยังไม่มีข้อมูล</div></div>';
+    return;
+  }
+  Object.entries(totals).sort((a,b)=>{
+    if (a[1].isGift!==b[1].isGift) return a[1].isGift?1:-1;
+    return (b[1].borrowed-b[1].paid)-(a[1].borrowed-a[1].paid);
+  }).forEach(([cat,data])=>{
+    const cfg=CAT_CONFIG[cat]||CAT_CONFIG.other;
+    const remain=data.borrowed-data.paid;
+    const pct=data.borrowed>0?Math.min(100,(data.paid/data.borrowed)*100):100;
+    const div=document.createElement('div');
+    div.className='card';
+    div.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="cat-badge ${cfg.cls}">${cfg.icon} ${cfg.label}</span>
+          <span style="font-size:11px;color:var(--text-muted);">${data.count} รายการ</span>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:14px;font-weight:700;color:${cfg.isGift?'#C2410C':remain>0?'var(--rose)':'var(--success)'};">${cfg.isGift?fmtMoney(data.borrowed):fmtMoney(remain)}</div>
+          <div style="font-size:10px;color:var(--text-muted);">${cfg.isGift?'ให้เลย':'จาก '+fmtMoney(data.borrowed)}</div>
+        </div>
+      </div>
+      <div class="progress-bar-outer"><div class="progress-bar-inner${cfg.isGift?' special':remain<=0?' done':''}" style="width:${pct}%;"></div></div>`;
+    el.appendChild(div);
+  });
+}
+
+// ===================== TOAST =====================
+function showToast(msg, type='success') {
+  const t=document.createElement('div');
+  t.className='toast '+type; t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),3200);
+}
+
+window.onload=()=>{ buildFilterRow(); renderLoans(); };
+</script>
+</body>
+</html>
